@@ -14,10 +14,7 @@ endif
 ifdef DEBUG
   CCFLAGS += -g
   CCFLAGS += -pg
-  CLFLAGS += -pg
-
 endif
 
 CLFLAGS += -L/usr/local/lib
-CLFLAGS += -lpthread
-CLFLAGS += -pthread
+CLFLAGS += `pkg-config opencv --cflags --libs`
