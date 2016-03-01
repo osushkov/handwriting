@@ -4,7 +4,7 @@
 
 using Vec1b = cv::Vec<unsigned char, 1>;
 
-void ImageWriter::writeImage(const CharImage &img, string outPath) {
+void ImageWriter::WriteImage(const CharImage &img, string outPath) {
   cv::Mat outImg(img.width, img.height, CV_8UC1);
 
   for (int y = 0; y < outImg.rows; y++) {

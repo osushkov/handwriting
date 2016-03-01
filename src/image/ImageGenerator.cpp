@@ -7,8 +7,15 @@
 
 using Vec1b = cv::Vec<unsigned char, 1>;
 
+ImageGenerator::ImageGenerator(float shiftX, float shiftY, float rotTheta) :
+    shiftX(shiftX), shiftY(shiftY), rotTheta(rotTheta) {
+  assert(shiftX <= 1.0f);
+  assert(shiftY <= 1.0f);
+  assert(rotTheta <= M_PI);
+}
+
 vector<CharImage> ImageGenerator::GenerateImages(const CharImage &base,
-                                                 unsigned numImages) {
+                                                 unsigned numImages) const {
 
   cv::Mat cvImg = convertToMat(base);
 
@@ -26,14 +33,10 @@ vector<CharImage> ImageGenerator::GenerateImages(const CharImage &base,
 
 ImageGenerator::Transform
 ImageGenerator::randomTransform(const CharImage &img) const {
-  const double WIDTH_FRAC_OFFSET = 0.25;
-  const double HEIGHT_FRAC_OFFSET = 0.25;
-  const double ROT_THETA = 45.0 * M_PI / 180.0;
-
   return Transform(
-      img.width * Util::RandInterval(-WIDTH_FRAC_OFFSET, WIDTH_FRAC_OFFSET),
-      img.height * Util::RandInterval(-HEIGHT_FRAC_OFFSET, HEIGHT_FRAC_OFFSET),
-      Util::RandInterval(-ROT_THETA, ROT_THETA));
+      img.width * Util::RandInterval(-shiftX, shiftX),
+      img.height * Util::RandInterval(-shiftY, shiftY),
+      Util::RandInterval(-rotTheta, rotTheta));
 }
 
 cv::Mat ImageGenerator::convertToMat(const CharImage &img) const {

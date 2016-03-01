@@ -7,7 +7,6 @@ CCFLAGS += -Wall -Wno-deprecated-declarations
 
 ifdef RELEASE
   CCFLAGS += -O3
-  CCFLAGS += -DNDEBUG
   CUDAFLAGS += -O3
 endif
 
@@ -16,5 +15,6 @@ ifdef DEBUG
   CCFLAGS += -pg
 endif
 
+CLFLAGS += -pthread
 CLFLAGS += -L/usr/local/lib
 CLFLAGS += `pkg-config opencv --cflags --libs`

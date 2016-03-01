@@ -25,7 +25,15 @@ void SimpleTrainer::Train(
     TrainingProvider samplesProvider = getStochasticSamples(trainingSamples);
     pair<Tensor, float> gradientError = network.ComputeGradient(samplesProvider);
     network.ApplyUpdate(gradientError.first * -lr);
+
+    for_each(trainingCallbacks, [&network, &gradientError, i] (const NetworkTrainerCallback &cb) {
+      cb(network, gradientError.second, i);
+    });
   }
+}
+
+void SimpleTrainer::AddProgressCallback(NetworkTrainerCallback callback) {
+  trainingCallbacks.push_back(callback);
 }
 
 float SimpleTrainer::getLearnRate(unsigned curIter, unsigned iterations) {

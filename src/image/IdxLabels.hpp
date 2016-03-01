@@ -11,7 +11,7 @@ class IdxLabels {
 public:
   IdxLabels(string filePath);
 
-  vector<int> load(void) const;
+  vector<int> Load(void) const;
 
 private:
   bool loadAndCheckMagicNumber(istream &in) const;

@@ -17,6 +17,8 @@ public:
   void Train(
       Network &network, vector<TrainingSample> &trainingSamples, unsigned iterations) override;
 
+  void AddProgressCallback(NetworkTrainerCallback callback) override;
+
 private:
 
   const float startLearnRate;
@@ -31,6 +33,8 @@ private:
   unsigned curSamplesOffset;
   float curLearnRate;
   float prevSampleError;
+
+  vector<NetworkTrainerCallback> trainingCallbacks;
 
   void updateLearnRate(unsigned curIter, unsigned iterations, float sampleError);
   TrainingProvider getStochasticSamples(vector<TrainingSample> &allSamples);

@@ -5,5 +5,5 @@
 
 class ImageWriter {
 public:
-  void writeImage(const CharImage &img, string outPath);
+  void WriteImage(const CharImage &img, string outPath);
 };

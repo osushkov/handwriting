@@ -7,6 +7,7 @@ struct TrainingSample {
   Vector input;
   Vector expectedOutput;
 
+  TrainingSample() = default;
   TrainingSample(const Vector &input, const Vector &expectedOutput) :
     input(input), expectedOutput(expectedOutput) {}
 };

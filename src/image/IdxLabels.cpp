@@ -8,7 +8,7 @@ static constexpr int IDX_MAGIC_NUM = 2049;
 
 IdxLabels::IdxLabels(string filePath) : filePath(filePath) {}
 
-vector<int> IdxLabels::load(void) const {
+vector<int> IdxLabels::Load(void) const {
   vector<int> result;
 
   std::ifstream is(filePath, std::ifstream::binary);

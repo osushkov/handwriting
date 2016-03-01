@@ -12,7 +12,7 @@ class IdxImages {
 public:
   IdxImages(string filePath);
 
-  vector<CharImage> load(void) const;
+  vector<CharImage> Load(void) const;
 
 private:
   bool loadAndCheckMagicNumber(istream &in) const;

@@ -6,8 +6,14 @@
 #include <vector>
 
 class ImageGenerator {
+  float shiftX;
+  float shiftY;
+  float rotTheta;
+
 public:
-  vector<CharImage> GenerateImages(const CharImage &base, unsigned numImages);
+  ImageGenerator(float shiftX, float shiftY, float rotTheta);
+  
+  vector<CharImage> GenerateImages(const CharImage &base, unsigned numImages) const;
 
 private:
   struct Transform {

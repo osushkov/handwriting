@@ -53,7 +53,15 @@ void DynamicTrainer::Train(
 
     network.ApplyUpdate(momentum);
     updateLearnRate(i, iterations, gradientError.second);
+
+    for_each(trainingCallbacks, [&network, &gradientError, i] (const NetworkTrainerCallback &cb) {
+      cb(network, gradientError.second, i);
+    });
   }
+}
+
+void DynamicTrainer::AddProgressCallback(NetworkTrainerCallback callback) {
+  trainingCallbacks.push_back(callback);
 }
 
 void DynamicTrainer::updateLearnRate(unsigned curIter, unsigned iterations, float sampleError) {

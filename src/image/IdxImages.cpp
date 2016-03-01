@@ -8,7 +8,7 @@ static constexpr int IDX_MAGIC_NUM = 2051;
 
 IdxImages::IdxImages(string filePath) : filePath(filePath) {}
 
-vector<CharImage> IdxImages::load(void) const {
+vector<CharImage> IdxImages::Load(void) const {
   vector<CharImage> result;
 
   std::ifstream is(filePath, std::ifstream::binary);
