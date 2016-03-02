@@ -22,6 +22,12 @@ const Matrix& Tensor::operator()(unsigned index) const {
   return data[index];
 }
 
+Tensor Tensor::operator*(const Tensor &t) const {
+  Tensor result(*this);
+  result *= t;
+  return result;
+}
+
 Tensor Tensor::operator+(const Tensor &t) const {
   Tensor result(*this);
   result += t;
@@ -44,6 +50,21 @@ Tensor Tensor::operator/(float s) const {
   Tensor result(*this);
   result /= s;
   return result;
+}
+
+Tensor& Tensor::operator*=(const Tensor &t) {
+  assert(this->NumLayers() == t.NumLayers());
+  for (unsigned i = 0; i < NumLayers(); i++) {
+    assert(data[i].rows() == t.data[i].rows());
+    assert(data[i].cols() == t.data[i].cols());
+
+    for (int y = 0; y < data[i].rows(); y++) {
+      for (int x = 0; x < data[i].cols(); x++) {
+        data[i](y, x) *= t.data[i](y, x);
+      }
+    }
+  }
+  return *this;
 }
 
 Tensor& Tensor::operator+=(const Tensor &t) {

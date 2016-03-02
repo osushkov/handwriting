@@ -8,6 +8,7 @@ class DynamicTrainer : public Trainer {
 public:
 
   DynamicTrainer(float startLearnRate,
+                 float epsilonRate,
                  float maxLearnRate,
                  float momentumAmount,
                  unsigned stochasticSamples);
@@ -22,6 +23,7 @@ public:
 private:
 
   const float startLearnRate;
+  const float epsilonRate;
   const float maxLearnRate;
   const float momentumAmount;
   const unsigned stochasticSamples;
@@ -38,4 +40,8 @@ private:
 
   void updateLearnRate(unsigned curIter, unsigned iterations, float sampleError);
   TrainingProvider getStochasticSamples(vector<TrainingSample> &allSamples);
+
+  void initWeightGradientRates(Tensor &rates);
+  void updateWeightsGradientRates(
+      const Tensor &curGradient, const Tensor &prevGradient, Tensor &rates);
 };

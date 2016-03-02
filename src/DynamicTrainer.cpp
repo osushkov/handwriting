@@ -6,15 +6,18 @@
 
 
 DynamicTrainer::DynamicTrainer(float startLearnRate,
+                               float epsilonRate,
                                float maxLearnRate,
                                float momentumAmount,
                                unsigned stochasticSamples) :
     startLearnRate(startLearnRate),
+    epsilonRate(epsilonRate),
     maxLearnRate(maxLearnRate),
     momentumAmount(momentumAmount),
     stochasticSamples(stochasticSamples) {
 
   assert(startLearnRate > 0.0f);
+  assert(epsilonRate > 0.0f && epsilonRate < startLearnRate);
   assert(maxLearnRate > 0.0f);
   assert(momentumAmount >= 0.0f && momentumAmount < 1.0f);
   assert(stochasticSamples > 0);
@@ -35,11 +38,11 @@ void DynamicTrainer::Train(
   prevSampleError = 0.0f;
 
   Tensor momentum;
-  for (unsigned i = 0; i < iterations; i++) {
-    // if (i%1000 == 0) {
-    //   cout << i << "/" << iterations << endl;
-    // }
 
+  Tensor weightGradientRate;
+  Tensor prevGradient;
+
+  for (unsigned i = 0; i < iterations; i++) {
     TrainingProvider samplesProvider = getStochasticSamples(trainingSamples);
     pair<Tensor, float> gradientError = network.ComputeGradient(samplesProvider);
 
@@ -47,11 +50,18 @@ void DynamicTrainer::Train(
 
     if (i == 0) {
       momentum = gradientError.first;
+
+      prevGradient = gradientError.first;
+      weightGradientRate = gradientError.first;
+      initWeightGradientRates(weightGradientRate);
     } else {
       momentum = momentum*momentumAmount + gradientError.first*(1.0f - momentumAmount);
+
+      updateWeightsGradientRates(prevGradient, gradientError.first, weightGradientRate);
+      prevGradient = gradientError.first;
     }
 
-    network.ApplyUpdate(momentum);
+    network.ApplyUpdate(momentum*weightGradientRate);
     updateLearnRate(i, iterations, gradientError.second);
 
     for_each(trainingCallbacks, [&network, &gradientError, i] (const NetworkTrainerCallback &cb) {
@@ -65,11 +75,13 @@ void DynamicTrainer::AddProgressCallback(NetworkTrainerCallback callback) {
 }
 
 void DynamicTrainer::updateLearnRate(unsigned curIter, unsigned iterations, float sampleError) {
+  curLearnRate *= pow(epsilonRate / startLearnRate, 1.0f / iterations);
+
   if (curIter > 0) {
     if (sampleError < prevSampleError) {
-      curLearnRate *= 1.1f;
+      curLearnRate *= 1.05f;
       curLearnRate = min<float>(curLearnRate, maxLearnRate);
-    } else {
+    } else if (sampleError > 1.1f * prevSampleError) {
       curLearnRate *= 0.95f;
     }
   }
@@ -94,4 +106,37 @@ TrainingProvider DynamicTrainer::getStochasticSamples(vector<TrainingSample> &al
   curSamplesIndex += numSamples;
 
   return result;
+}
+
+void DynamicTrainer::initWeightGradientRates(Tensor &rates) {
+  for (unsigned i = 0; i < rates.NumLayers(); i++) {
+    rates(i).fill(1.0f);
+  }
+}
+
+void DynamicTrainer::updateWeightsGradientRates(
+    const Tensor &prevGradient, const Tensor &curGradient, Tensor &rates) {
+
+  assert(curGradient.NumLayers() == prevGradient.NumLayers());
+  assert(curGradient.NumLayers() == rates.NumLayers());
+
+  for (unsigned i = 0; i < curGradient.NumLayers(); i++) {
+    assert(curGradient(i).rows() == prevGradient(i).rows());
+    assert(curGradient(i).cols() == prevGradient(i).cols());
+    assert(curGradient(i).rows() == rates(i).rows());
+    assert(curGradient(i).cols() == rates(i).cols());
+
+    for (int y = 0; y < curGradient(i).rows(); y++) {
+      for (int x = 0; x < curGradient(i).cols(); x++) {
+        float prev = prevGradient(i)(y, x);
+        float cur = curGradient(i)(y, x);
+
+        if ((prev >= 0.0f && cur >= 0.0f) || (prev <= 0.0f && cur <= 0.0f)) {
+          rates(i)(y, x) += 0.05f;
+        } else {
+          rates(i)(y, x) *= 0.95f;
+        }
+      }
+    }
+  }
 }

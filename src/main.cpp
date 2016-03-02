@@ -24,7 +24,7 @@
 using namespace std;
 using Eigen::MatrixXd;
 
-static constexpr unsigned NUM_DERIVED_IMAGES = 1;
+static constexpr unsigned NUM_DERIVED_IMAGES = 5;
 
 static constexpr float GENERATED_IMAGE_SHIFT_X = 0.1f;
 static constexpr float GENERATED_IMAGE_SHIFT_Y = 0.1f;
@@ -171,7 +171,6 @@ int main() {
   vector<TrainingSample> trainingSamples =
       loadSamples("data/train_images.idx3", "data/train_labels.idx1", true);
   random_shuffle(trainingSamples.begin(), trainingSamples.end());
-  trainingSamples.resize(trainingSamples.size() / 10);
   cout << "training data size: " << trainingSamples.size() << endl;
 
   cout << "loading test data" << endl;
@@ -184,9 +183,9 @@ int main() {
   unsigned inputSize = trainingSamples.front().input.rows();
   unsigned outputSize = trainingSamples.front().expectedOutput.rows();
 
-  Network network({inputSize, (inputSize + outputSize)/2, outputSize});
+  Network network({inputSize, inputSize, outputSize});
   // uptr<Trainer> trainer = make_unique<SimpleTrainer>(0.2, 0.001, 500);
-  uptr<Trainer> trainer = make_unique<DynamicTrainer>(0.5f, 0.5f, 0.25f, 500);
+  uptr<Trainer> trainer = make_unique<DynamicTrainer>(0.5f, 0.00001f, 0.5f, 0.25f, 1000);
 
   trainer->AddProgressCallback([&trainingSamples, &testSamples]
     (Network& network, float trainError, unsigned iter) {
