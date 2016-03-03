@@ -11,7 +11,8 @@ public:
                  float epsilonRate,
                  float maxLearnRate,
                  float momentumAmount,
-                 unsigned stochasticSamples);
+                 unsigned startNumSamples,
+                 unsigned maxNumSamples);
 
   virtual ~DynamicTrainer() = default;
 
@@ -26,7 +27,8 @@ private:
   const float epsilonRate;
   const float maxLearnRate;
   const float momentumAmount;
-  const unsigned stochasticSamples;
+  const unsigned startNumSamples;
+  const unsigned maxNumSamples;
 
   mt19937 rnd;
 
@@ -39,9 +41,12 @@ private:
   vector<NetworkTrainerCallback> trainingCallbacks;
 
   void updateLearnRate(unsigned curIter, unsigned iterations, float sampleError);
-  TrainingProvider getStochasticSamples(vector<TrainingSample> &allSamples);
+  TrainingProvider getStochasticSamples(
+      vector<TrainingSample> &allSamples, unsigned curIter, unsigned totalIters);
 
   void initWeightGradientRates(Tensor &rates);
   void updateWeightsGradientRates(
       const Tensor &curGradient, const Tensor &prevGradient, Tensor &rates);
+
+  unsigned numStochasticSamples(unsigned curIter, unsigned totalIter);
 };

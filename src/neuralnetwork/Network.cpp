@@ -1,7 +1,14 @@
 
 #include "Network.hpp"
 #include "../util/Util.hpp"
+#include "../util/Timer.hpp"
 #include "../common/ThreadPool.hpp"
+
+#include <tbb/tbb.h>
+#include <tbb/task_scheduler_init.h>
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+
 #include <cassert>
 #include <cmath>
 #include <future>
@@ -18,21 +25,21 @@ struct NetworkContext {
   vector<Vector> layerDeltas;
 };
 
-
 struct Network::NetworkImpl {
-  unsigned numInputs;
-  unsigned numOutputs;
-  unsigned numLayers;
+  const unsigned numInputs;
+  const unsigned numOutputs;
+  const unsigned numLayers;
 
   Tensor layerWeights;
   Tensor zeroGradient;
 
 
-  NetworkImpl(const vector<unsigned> &layerSizes) {
+  NetworkImpl(const vector<unsigned> &layerSizes) :
+      numInputs(layerSizes[0]),
+      numOutputs(layerSizes[layerSizes.size() - 1]),
+      numLayers(layerSizes.size() - 1) {
+
     assert(layerSizes.size() >= 2);
-    this->numLayers = layerSizes.size() - 1;
-    this->numInputs = layerSizes[0];
-    this->numOutputs = layerSizes[layerSizes.size() - 1];
 
     for (unsigned i = 0; i < numLayers; i++) {
       layerWeights.AddLayer(createLayer(layerSizes[i], layerSizes[i+1]));
@@ -58,43 +65,35 @@ struct Network::NetworkImpl {
     // Tensor& netGradient{gradient.first};
     // float& error{gradient.second};
     //
-    // for (unsigned i = 0; i < NUM_THREADS; i++) {
-    //   unsigned start = (i * samplesProvider.NumSamples()) / NUM_THREADS;
-    //   unsigned end = ((i+1) * samplesProvider.NumSamples()) / NUM_THREADS;
-    //
-    //   auto subsetGradient = computeGradientSubset(samplesProvider, start, end);
-    //   netGradient += subsetGradient.first;
-    //   error += subsetGradient.second;
-    // }
+    // auto subsetGradient = computeGradientSubset(samplesProvider, 0, samplesProvider.NumSamples());
+    // netGradient += subsetGradient.first;
+    // error += subsetGradient.second;
 
-    const unsigned numSubsets = ThreadPool::instance().NumThreads();
+
+    const unsigned numSubsets = tbb::task_scheduler_init::default_num_threads();
 
     auto gradient = make_pair(zeroGradient, 0.0f);
     Tensor& netGradient = gradient.first;
     float& error = gradient.second;
 
     mutex gradientMutex;
-    vector<future<void>> futures;
-    futures.reserve(numSubsets);
 
-    for (unsigned i = 0; i < numSubsets; i++) {
-      futures.push_back(ThreadPool::instance().Execute(
-          [this, &gradientMutex, &samplesProvider, &netGradient, &error, i, numSubsets]() {
-        unsigned start = (i * samplesProvider.NumSamples()) / numSubsets;
-        unsigned end = ((i+1) * samplesProvider.NumSamples()) / numSubsets;
-        auto subsetGradient = computeGradientSubset(samplesProvider, start, end);
+    tbb::parallel_for(tbb::blocked_range<unsigned>(0, numSubsets),
+        [this, numSubsets, &samplesProvider, &netGradient, &error, &gradientMutex]
+        (const tbb::blocked_range<unsigned>& r) {
+          for (unsigned i = r.begin(); i != r.end(); i++) {
+            unsigned start = (i * samplesProvider.NumSamples()) / numSubsets;
+            unsigned end = ((i+1) * samplesProvider.NumSamples()) / numSubsets;
 
-        {
-          std::unique_lock<std::mutex> lock(gradientMutex);
-          netGradient += subsetGradient.first;
-          error += subsetGradient.second;
-        }
-      }));
-    }
+            auto subsetGradient = computeGradientSubset(samplesProvider, start, end);
 
-    for (auto& f : futures) {
-      f.get();
-    }
+            {
+              std::unique_lock<std::mutex> lock(gradientMutex);
+              netGradient += subsetGradient.first;
+              error += subsetGradient.second;
+            }
+          }
+        });
 
     float scaleFactor = 1.0f / samplesProvider.NumSamples();
     netGradient *= scaleFactor;
@@ -127,24 +126,19 @@ private:
   }
 
   pair<Tensor, float> computeGradientSubset(
-      const TrainingProvider &samplesProvider, unsigned start, unsigned end) {
+      const TrainingProvider &samplesProvider, unsigned start, unsigned end) const {
 
     auto gradient = make_pair(zeroGradient, 0.0f);
-    Tensor& netGradient = gradient.first;
-    float& error = gradient.second;
-
     NetworkContext ctx;
+
     for (unsigned i = start; i < end; i++) {
-      pair<Tensor, float> gradientAndError =
-          computeSampleGradient(samplesProvider.GetSample(i), ctx);
-      netGradient += gradientAndError.first;
-      error += gradientAndError.second;
+      computeSampleGradient(samplesProvider.GetSample(i), ctx, gradient);
     }
 
     return gradient;
   }
 
-  Vector process(const Vector &input, NetworkContext &ctx) {
+  Vector process(const Vector &input, NetworkContext &ctx) const {
     assert(input.rows() == numInputs);
 
     ctx.layerOutputs.resize(layerWeights.NumLayers());
@@ -157,7 +151,7 @@ private:
     return ctx.layerOutputs[ctx.layerOutputs.size()-1];
   }
 
-  Vector getLayerOutput(const Vector &prevLayer, const Matrix &layerWeights) {
+  Vector getLayerOutput(const Vector &prevLayer, const Matrix &layerWeights) const {
     Vector z = layerWeights.topRightCorner(layerWeights.rows(), layerWeights.cols()-1) * prevLayer;
     for (unsigned i = 0; i < layerWeights.rows(); i++) {
       z(i) += layerWeights(i, 0);
@@ -166,11 +160,12 @@ private:
     return z;
   }
 
-  float activationFunc(float v) {
+  float activationFunc(float v) const {
     return 1.0f / (1.0f + expf(-v));
   }
 
-  pair<Tensor, float> computeSampleGradient(const TrainingSample &sample, NetworkContext &ctx) {
+  void computeSampleGradient(
+      const TrainingSample &sample, NetworkContext &ctx, pair<Tensor, float> &outGradient) const {
     Vector output = process(sample.input, ctx);
 
     ctx.layerDeltas.resize(numLayers);
@@ -188,20 +183,25 @@ private:
       }
     }
 
-    auto result = make_pair(Tensor(), 0.0f);
     for (unsigned i = 0; i < numLayers; i++) {
-      auto inputs = getInputWithBias(i == 0 ? sample.input : ctx.layerOutputs[i-1]);
-      result.first.AddLayer(ctx.layerDeltas[i] * inputs.transpose());
+      Matrix &og = outGradient.first(i);
+      const auto &ld = ctx.layerDeltas[i];
+      const auto inputs = getInputWithBias(i == 0 ? sample.input : ctx.layerOutputs[i-1]);
+
+      for (unsigned r = 0; r < ld.rows(); r++) {
+        for (unsigned c = 0; c < inputs.rows(); c++) {
+          og(r, c) += inputs(c) * ld(r);
+        }
+      }
     }
 
     for (unsigned i = 0; i < output.rows(); i++) {
-      result.second += (output(i) - sample.expectedOutput(i)) * (output(i) - sample.expectedOutput(i));
+      outGradient.second +=
+          (output(i) - sample.expectedOutput(i)) * (output(i) - sample.expectedOutput(i));
     }
-
-    return result;
   }
 
-  Vector getInputWithBias(const Vector &noBiasInput) {
+  Vector getInputWithBias(const Vector &noBiasInput) const {
     Vector result(noBiasInput.rows() + 1);
     result(0) = 1.0f;
     result.bottomRightCorner(noBiasInput.rows(), 1) = noBiasInput;

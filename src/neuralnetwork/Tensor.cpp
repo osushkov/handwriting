@@ -2,6 +2,7 @@
 #include "Tensor.hpp"
 #include <cassert>
 #include <algorithm>
+#include <iostream>
 
 
 unsigned Tensor::NumLayers(void) const {

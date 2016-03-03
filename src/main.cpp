@@ -1,5 +1,7 @@
 
 #include <Eigen/Dense>
+#include <Eigen/Core>
+
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -20,6 +22,7 @@
 #include "image/ImageWriter.hpp"
 #include "neuralnetwork/Network.hpp"
 #include "util/Util.hpp"
+#include "util/Timer.hpp"
 
 using namespace std;
 using Eigen::MatrixXd;
@@ -165,6 +168,7 @@ float testNetwork(Network &network, const std::vector<TrainingSample> &evalSampl
 }
 
 int main() {
+  Eigen::initParallel();
   srand(1234);
 
   cout << "loading training data" << endl;
@@ -185,7 +189,7 @@ int main() {
 
   Network network({inputSize, inputSize, outputSize});
   // uptr<Trainer> trainer = make_unique<SimpleTrainer>(0.2, 0.001, 500);
-  uptr<Trainer> trainer = make_unique<DynamicTrainer>(0.5f, 0.00001f, 0.5f, 0.25f, 1000);
+  uptr<Trainer> trainer = make_unique<DynamicTrainer>(0.5f, 0.00001f, 0.5f, 0.25f, 1000, 30000);
 
   trainer->AddProgressCallback([&trainingSamples, &testSamples]
     (Network& network, float trainError, unsigned iter) {
@@ -200,6 +204,5 @@ int main() {
   trainer->Train(network, trainingSamples, 100000);
 
   cout << "finished" << endl;
-  getchar();
   return 0;
 }

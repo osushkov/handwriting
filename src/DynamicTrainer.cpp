@@ -9,18 +9,21 @@ DynamicTrainer::DynamicTrainer(float startLearnRate,
                                float epsilonRate,
                                float maxLearnRate,
                                float momentumAmount,
-                               unsigned stochasticSamples) :
+                               unsigned startNumSamples,
+                               unsigned maxNumSamples) :
     startLearnRate(startLearnRate),
     epsilonRate(epsilonRate),
     maxLearnRate(maxLearnRate),
     momentumAmount(momentumAmount),
-    stochasticSamples(stochasticSamples) {
+    startNumSamples(startNumSamples),
+    maxNumSamples(maxNumSamples) {
 
   assert(startLearnRate > 0.0f);
   assert(epsilonRate > 0.0f && epsilonRate < startLearnRate);
   assert(maxLearnRate > 0.0f);
   assert(momentumAmount >= 0.0f && momentumAmount < 1.0f);
-  assert(stochasticSamples > 0);
+  assert(startNumSamples > 0);
+  assert(maxNumSamples >= startNumSamples);
 
   random_device rd;
   this->rnd = mt19937(rd());
@@ -43,7 +46,7 @@ void DynamicTrainer::Train(
   Tensor prevGradient;
 
   for (unsigned i = 0; i < iterations; i++) {
-    TrainingProvider samplesProvider = getStochasticSamples(trainingSamples);
+    TrainingProvider samplesProvider = getStochasticSamples(trainingSamples, i, iterations);
     pair<Tensor, float> gradientError = network.ComputeGradient(samplesProvider);
 
     gradientError.first *= -curLearnRate;
@@ -89,8 +92,9 @@ void DynamicTrainer::updateLearnRate(unsigned curIter, unsigned iterations, floa
   prevSampleError = sampleError;
 }
 
-TrainingProvider DynamicTrainer::getStochasticSamples(vector<TrainingSample> &allSamples) {
-  unsigned numSamples = min<unsigned>(allSamples.size(), stochasticSamples);
+TrainingProvider DynamicTrainer::getStochasticSamples(
+    vector<TrainingSample> &allSamples, unsigned curIter, unsigned totalIters) {
+  unsigned numSamples = min<unsigned>(allSamples.size(), numStochasticSamples(curIter, totalIters));
 
   if ((curSamplesIndex + numSamples) > allSamples.size()) {
     if (numCompletePasses%10 == 0) {
@@ -139,4 +143,11 @@ void DynamicTrainer::updateWeightsGradientRates(
       }
     }
   }
+}
+
+unsigned DynamicTrainer::numStochasticSamples(unsigned curIter, unsigned totalIters) {
+  assert(curIter <= totalIters);
+
+  float iterFrac = curIter / static_cast<float>(totalIters);
+  return startNumSamples + static_cast<unsigned>((maxNumSamples - startNumSamples) * iterFrac);
 }
