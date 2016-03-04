@@ -12,8 +12,8 @@
 #include <string>
 #include <vector>
 
-// #include "common/ThreadPool.hpp"
 #include "DynamicTrainer.hpp"
+#include "DynamicTrainerBuilder.hpp"
 #include "SimpleTrainer.hpp"
 #include "common/Common.hpp"
 #include "image/IdxImages.hpp"
@@ -63,11 +63,8 @@ map<int, vector<CharImage>> generateDerivedImages(const map<int, vector<CharImag
   assert(numDerived >= 1);
   map<int, vector<CharImage>> result;
 
-  ImageWriter writer;
-
   for (const auto &entry : labeledImages) {
     int digit = entry.first;
-    int index = 0;
 
     result[digit] = vector<CharImage>();
     result[digit].reserve(entry.second.size() * numDerived);
@@ -78,13 +75,7 @@ map<int, vector<CharImage>> generateDerivedImages(const map<int, vector<CharImag
       for (auto &gimage : generated) {
         assert(gimage.width == image.width && gimage.height == image.height);
         result[digit].push_back(gimage);
-        //
-        // stringstream filename;
-        // filename << outDirectory << digit << "_" << (index++) << ".png";
-        //
-        // writer.WriteImage(gimage, filename.str());
       }
-      // break;
     }
   }
 
@@ -165,6 +156,22 @@ float testNetwork(Network &network, const std::vector<TrainingSample> &evalSampl
   return 1.0f - (numCorrect / static_cast<float>(evalSamples.size()));
 }
 
+uptr<Trainer> getTrainer(void) {
+  DynamicTrainerBuilder builder;
+
+  builder.StartLearnRate(0.5f)
+      .FinishLearnRate(0.001f)
+      .MaxLearnRate(0.5f)
+      .Momentum(0.25f)
+      .StartSamplesPerIter(1000)
+      .FinishSamplesPerIter(10000)
+      .UseMomentum(true)
+      .UseSpeedup(true)
+      .UseWeightRates(true);
+
+  return builder.Build();
+}
+
 int main() {
   Eigen::initParallel();
   srand(1234);
@@ -185,15 +192,16 @@ int main() {
   unsigned outputSize = trainingSamples.front().expectedOutput.rows();
 
   Network network({inputSize, inputSize, outputSize});
-  // uptr<Trainer> trainer = make_unique<SimpleTrainer>(0.2, 0.001, 500);
-  uptr<Trainer> trainer = make_unique<DynamicTrainer>(0.5f, 0.00001f, 0.5f, 0.25f, 1000, 30000);
+  auto trainer = getTrainer();
 
   trainer->AddProgressCallback(
       [&trainingSamples, &testSamples](Network &network, float trainError, unsigned iter) {
-        if (iter % 100 == 0) {
+        if (iter % 10 == 0) {
           float testWrong = testNetwork(network, testSamples);
-          float trainWrong = testNetwork(network, trainingSamples);
-          cout << iter << "\t" << trainError << "\t" << testWrong << "\t" << trainWrong << endl;
+          cout << iter << "\t" << trainError << "\t" << testWrong << endl;
+
+          // float trainWrong = testNetwork(network, trainingSamples);
+          // cout << iter << "\t" << trainError << "\t" << testWrong << "\t" << trainWrong << endl;
         }
       });
 

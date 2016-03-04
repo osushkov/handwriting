@@ -6,10 +6,12 @@
 
 DynamicTrainer::DynamicTrainer(float startLearnRate, float epsilonRate, float maxLearnRate,
                                float momentumAmount, unsigned startNumSamples,
-                               unsigned maxNumSamples)
+                               unsigned maxNumSamples, bool useMomentum, bool useSpeedup,
+                               bool useWeightRates)
     : startLearnRate(startLearnRate), epsilonRate(epsilonRate), maxLearnRate(maxLearnRate),
       momentumAmount(momentumAmount), startNumSamples(startNumSamples),
-      maxNumSamples(maxNumSamples) {
+      maxNumSamples(maxNumSamples), useMomentum(useMomentum), useSpeedup(useSpeedup),
+      useWeightRates(useWeightRates) {
 
   assert(startLearnRate > 0.0f);
   assert(epsilonRate > 0.0f && epsilonRate < startLearnRate);

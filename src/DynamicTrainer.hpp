@@ -7,7 +7,8 @@
 class DynamicTrainer : public Trainer {
 public:
   DynamicTrainer(float startLearnRate, float epsilonRate, float maxLearnRate, float momentumAmount,
-                 unsigned startNumSamples, unsigned maxNumSamples);
+                 unsigned startNumSamples, unsigned maxNumSamples, bool useMomentum,
+                 bool useSpeedup, bool useWeightRates);
 
   virtual ~DynamicTrainer() = default;
 
@@ -23,6 +24,10 @@ private:
   const float momentumAmount;
   const unsigned startNumSamples;
   const unsigned maxNumSamples;
+
+  const bool useMomentum;
+  const bool useSpeedup;
+  const bool useWeightRates;
 
   mt19937 rnd;
 
