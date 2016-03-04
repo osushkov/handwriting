@@ -27,7 +27,7 @@
 using namespace std;
 using Eigen::MatrixXd;
 
-static constexpr unsigned NUM_DERIVED_IMAGES = 5;
+static constexpr unsigned NUM_DERIVED_IMAGES = 1;
 
 static constexpr float GENERATED_IMAGE_SHIFT_X = 0.1f;
 static constexpr float GENERATED_IMAGE_SHIFT_Y = 0.1f;

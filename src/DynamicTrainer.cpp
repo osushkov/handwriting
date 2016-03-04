@@ -53,9 +53,15 @@ void DynamicTrainer::Train(Network &network, vector<TrainingSample> &trainingSam
       weightGradientRate = gradientError.first;
       initWeightGradientRates(weightGradientRate);
     } else {
-      momentum = momentum * momentumAmount + gradientError.first * (1.0f - momentumAmount);
+      if (useMomentum) {
+        momentum = momentum * momentumAmount + gradientError.first * (1.0f - momentumAmount);
+      } else {
+        momentum = gradientError.first;
+      }
 
-      updateWeightsGradientRates(prevGradient, gradientError.first, weightGradientRate);
+      if (useWeightRates) {
+        updateWeightsGradientRates(prevGradient, gradientError.first, weightGradientRate);
+      }
       prevGradient = gradientError.first;
     }
 
@@ -75,7 +81,7 @@ void DynamicTrainer::AddProgressCallback(NetworkTrainerCallback callback) {
 void DynamicTrainer::updateLearnRate(unsigned curIter, unsigned iterations, float sampleError) {
   curLearnRate *= pow(epsilonRate / startLearnRate, 1.0f / iterations);
 
-  if (curIter > 0) {
+  if (curIter > 0 && useSpeedup) {
     if (sampleError < prevSampleError) {
       curLearnRate *= 1.05f;
       curLearnRate = min<float>(curLearnRate, maxLearnRate);
