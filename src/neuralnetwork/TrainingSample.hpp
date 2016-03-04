@@ -8,8 +8,8 @@ struct TrainingSample {
   Vector expectedOutput;
 
   TrainingSample() = default;
-  TrainingSample(const Vector &input, const Vector &expectedOutput) :
-    input(input), expectedOutput(expectedOutput) {}
+  TrainingSample(const Vector &input, const Vector &expectedOutput)
+      : input(input), expectedOutput(expectedOutput) {}
 };
 
-std::ostream& operator<<(std::ostream& stream, const TrainingSample& ts);
+std::ostream &operator<<(std::ostream &stream, const TrainingSample &ts);

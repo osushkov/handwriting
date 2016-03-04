@@ -17,9 +17,8 @@
 
 class ThreadPool {
 public:
-
   // Get the global singleton instance.
-  static ThreadPool& instance(void);
+  static ThreadPool &instance(void);
 
   ThreadPool();
   ThreadPool(size_t concurrency);
@@ -30,8 +29,8 @@ public:
   ThreadPool(const ThreadPool &) = delete;
   ThreadPool(ThreadPool &&) = delete;
 
-  ThreadPool& operator=(const ThreadPool &) = delete;
-  ThreadPool& operator=(ThreadPool &&) = delete;
+  ThreadPool &operator=(const ThreadPool &) = delete;
+  ThreadPool &operator=(ThreadPool &&) = delete;
 
   //  enqueue_task
   //
@@ -52,18 +51,20 @@ public:
   //    success or an exception. Also results in an
   //    exception if the thread pool is destroyed before
   //    execution has begun.
-  template<typename Func, typename ... Args>
-  auto Execute(Func&& task, Args&&... args) -> std::future<decltype(task(std::forward<Args>(args)...))> {
+  template <typename Func, typename... Args>
+  auto Execute(Func &&task, Args &&... args)
+      -> std::future<decltype(task(std::forward<Args>(args)...))> {
     //  Return type of the functor, can be void via
     //  specilisation of task_package_impl
     using R = decltype(task(std::forward<Args>(args)...));
 
-    auto promise = std::promise<R>{ };
+    auto promise = std::promise<R>{};
     auto future = promise.get_future();
     auto bound_task = std::bind(std::forward<Func>(task), std::forward<Args>(args)...);
 
     // ensures no memory leak if push throws (it shouldn't but to be safe)
-    auto package_ptr = std::make_unique<task_package_impl<R, decltype(bound_task)>>(std::move(bound_task), std::move(promise));
+    auto package_ptr = std::make_unique<task_package_impl<R, decltype(bound_task)>>(
+        std::move(bound_task), std::move(promise));
 
     tasks.push(static_cast<task_package *>(package_ptr.get()));
 
@@ -78,9 +79,7 @@ public:
     return future;
   };
 
-  unsigned NumThreads(void) const {
-    return threads.size();
-  }
+  unsigned NumThreads(void) const { return threads.size(); }
 
 private:
   std::vector<std::thread> threads;
@@ -92,5 +91,5 @@ private:
   std::mutex wakeup_mutex;
 #endif
 
-  bool pop_task(std::unique_ptr<task_package> & out);
+  bool pop_task(std::unique_ptr<task_package> &out);
 };

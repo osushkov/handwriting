@@ -1,29 +1,24 @@
 #include "ThreadPool.hpp"
 
 #include <exception>
-#include <utility>
 #include <iostream>
+#include <utility>
 
-
-template<typename T>
-constexpr T zero(T) {
-  return 0;
-}
+template <typename T> constexpr T zero(T) { return 0; }
 
 static const unsigned NUM_THREADS = 4;
 static ThreadPool singletonInstance(NUM_THREADS);
 
-ThreadPool& ThreadPool::instance(void) {
-  return singletonInstance;
-}
+ThreadPool &ThreadPool::instance(void) { return singletonInstance; }
 
 ThreadPool::ThreadPool() : ThreadPool(std::thread::hardware_concurrency()) {}
 ThreadPool::ThreadPool(size_t concurrency) : ThreadPool(concurrency, 128) {}
 
 ThreadPool::ThreadPool(size_t concurrency, size_t queueSize)
-    :  threads(), shutdown_flag(false), tasks(queueSize)
+    : threads(), shutdown_flag(false), tasks(queueSize)
 #ifndef USE_YIELD
-    , wakeup_signal(), wakeup_mutex()
+      ,
+      wakeup_signal(), wakeup_mutex()
 #endif
 {
   // This is more efficient than creating the 'threads' vector with
@@ -44,16 +39,16 @@ ThreadPool::ThreadPool(size_t concurrency, size_t queueSize)
         if (pop_task(current_task_package)) {
           current_task_package->run_task();
         } else {
-          // rather than spinning, give up thread time to other things
+// rather than spinning, give up thread time to other things
 #ifdef USE_YIELD
           std::this_thread::yield();
 #else
           auto lock = std::unique_lock<std::mutex>(wakeup_mutex);
-          wakeup_signal.wait(lock, [this](){ return !tasks.empty() || shutdown_flag; });
+          wakeup_signal.wait(lock, [this]() { return !tasks.empty() || shutdown_flag; });
 #endif
         }
       }
-  });
+    });
   }
 }
 
@@ -66,7 +61,7 @@ ThreadPool::~ThreadPool() {
 #endif
 
   // wait for work to complete then destroy thread
-  for (auto && thread : threads) {
+  for (auto &&thread : threads) {
     thread.join();
   }
 
@@ -80,7 +75,7 @@ ThreadPool::~ThreadPool() {
   }
 }
 
-bool ThreadPool::pop_task(std::unique_ptr<task_package> & out) {
+bool ThreadPool::pop_task(std::unique_ptr<task_package> &out) {
   task_package *temp_ptr = nullptr;
 
   if (tasks.pop(temp_ptr)) {

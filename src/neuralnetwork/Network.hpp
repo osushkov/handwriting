@@ -1,11 +1,10 @@
 #pragma once
 
-#include "TrainingProvider.hpp"
 #include "../common/Common.hpp"
 #include "../common/Math.hpp"
 #include "Tensor.hpp"
+#include "TrainingProvider.hpp"
 #include <vector>
-
 
 class Network {
 public:
@@ -18,7 +17,7 @@ public:
   pair<Tensor, float> ComputeGradient(const TrainingProvider &samplesProvider);
   void ApplyUpdate(const Tensor &weightUpdates);
 
-  std::ostream& Output(std::ostream& stream);
+  std::ostream &Output(std::ostream &stream);
 
 private:
   struct NetworkImpl;

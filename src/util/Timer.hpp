@@ -6,13 +6,12 @@
 
 class Timer {
 public:
-
   void Start(void);
   void Stop(void);
   float GetNumElapsedSeconds(void) const;
   unsigned GetNumElapsedMicroseconds(void) const;
 
 private:
-    struct timeval startTime;
-    struct timeval endTime;
+  struct timeval startTime;
+  struct timeval endTime;
 };

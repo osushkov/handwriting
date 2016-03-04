@@ -6,23 +6,17 @@
 
 class DynamicTrainer : public Trainer {
 public:
-
-  DynamicTrainer(float startLearnRate,
-                 float epsilonRate,
-                 float maxLearnRate,
-                 float momentumAmount,
-                 unsigned startNumSamples,
-                 unsigned maxNumSamples);
+  DynamicTrainer(float startLearnRate, float epsilonRate, float maxLearnRate, float momentumAmount,
+                 unsigned startNumSamples, unsigned maxNumSamples);
 
   virtual ~DynamicTrainer() = default;
 
-  void Train(
-      Network &network, vector<TrainingSample> &trainingSamples, unsigned iterations) override;
+  void Train(Network &network, vector<TrainingSample> &trainingSamples,
+             unsigned iterations) override;
 
   void AddProgressCallback(NetworkTrainerCallback callback) override;
 
 private:
-
   const float startLearnRate;
   const float epsilonRate;
   const float maxLearnRate;
@@ -41,12 +35,12 @@ private:
   vector<NetworkTrainerCallback> trainingCallbacks;
 
   void updateLearnRate(unsigned curIter, unsigned iterations, float sampleError);
-  TrainingProvider getStochasticSamples(
-      vector<TrainingSample> &allSamples, unsigned curIter, unsigned totalIters);
+  TrainingProvider getStochasticSamples(vector<TrainingSample> &allSamples, unsigned curIter,
+                                        unsigned totalIters);
 
   void initWeightGradientRates(Tensor &rates);
-  void updateWeightsGradientRates(
-      const Tensor &curGradient, const Tensor &prevGradient, Tensor &rates);
+  void updateWeightsGradientRates(const Tensor &curGradient, const Tensor &prevGradient,
+                                  Tensor &rates);
 
   unsigned numStochasticSamples(unsigned curIter, unsigned totalIter);
 };

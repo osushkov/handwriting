@@ -1,6 +1,6 @@
 
-#include <Eigen/Dense>
 #include <Eigen/Core>
+#include <Eigen/Dense>
 
 #include <cmath>
 #include <cstdlib>
@@ -21,8 +21,8 @@
 #include "image/ImageGenerator.hpp"
 #include "image/ImageWriter.hpp"
 #include "neuralnetwork/Network.hpp"
-#include "util/Util.hpp"
 #include "util/Timer.hpp"
+#include "util/Util.hpp"
 
 using namespace std;
 using Eigen::MatrixXd;
@@ -33,12 +33,10 @@ static constexpr float GENERATED_IMAGE_SHIFT_X = 0.1f;
 static constexpr float GENERATED_IMAGE_SHIFT_Y = 0.1f;
 static constexpr float GENERATED_IMAGE_ROT_THETA = 15.0f * M_PI / 180.0f;
 
-static const ImageGenerator imageGenerator(
-    GENERATED_IMAGE_SHIFT_X, GENERATED_IMAGE_SHIFT_Y, GENERATED_IMAGE_ROT_THETA);
+static const ImageGenerator imageGenerator(GENERATED_IMAGE_SHIFT_X, GENERATED_IMAGE_SHIFT_Y,
+                                           GENERATED_IMAGE_ROT_THETA);
 
-
-map<int, vector<CharImage>> loadLabeledImages(string imagePath,
-                                              string labelPath) {
+map<int, vector<CharImage>> loadLabeledImages(string imagePath, string labelPath) {
   IdxImages imageLoader(imagePath);
   IdxLabels labelLoader(labelPath);
 
@@ -59,8 +57,8 @@ map<int, vector<CharImage>> loadLabeledImages(string imagePath,
   return result;
 }
 
-map<int, vector<CharImage>> generateDerivedImages(
-    const map<int, vector<CharImage>> &labeledImages, string outDirectory, unsigned numDerived) {
+map<int, vector<CharImage>> generateDerivedImages(const map<int, vector<CharImage>> &labeledImages,
+                                                  string outDirectory, unsigned numDerived) {
 
   assert(numDerived >= 1);
   map<int, vector<CharImage>> result;
@@ -183,7 +181,6 @@ int main() {
   random_shuffle(testSamples.begin(), testSamples.end());
   cout << "test data size: " << testSamples.size() << endl;
 
-
   unsigned inputSize = trainingSamples.front().input.rows();
   unsigned outputSize = trainingSamples.front().expectedOutput.rows();
 
@@ -191,14 +188,14 @@ int main() {
   // uptr<Trainer> trainer = make_unique<SimpleTrainer>(0.2, 0.001, 500);
   uptr<Trainer> trainer = make_unique<DynamicTrainer>(0.5f, 0.00001f, 0.5f, 0.25f, 1000, 30000);
 
-  trainer->AddProgressCallback([&trainingSamples, &testSamples]
-    (Network& network, float trainError, unsigned iter) {
-      if (iter % 10 == 0) {
-        float testWrong = testNetwork(network, testSamples);
-        float trainWrong = testNetwork(network, trainingSamples);
-        cout << iter << "\t" << trainError << "\t" << testWrong << "\t" << trainWrong << endl;
-      }
-    });
+  trainer->AddProgressCallback(
+      [&trainingSamples, &testSamples](Network &network, float trainError, unsigned iter) {
+        if (iter % 100 == 0) {
+          float testWrong = testNetwork(network, testSamples);
+          float trainWrong = testNetwork(network, trainingSamples);
+          cout << iter << "\t" << trainError << "\t" << testWrong << "\t" << trainWrong << endl;
+        }
+      });
 
   cout << "starting training..." << endl;
   trainer->Train(network, trainingSamples, 100000);

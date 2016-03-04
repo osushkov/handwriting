@@ -4,19 +4,12 @@
 #include <iostream>
 #include <random>
 
-
-DynamicTrainer::DynamicTrainer(float startLearnRate,
-                               float epsilonRate,
-                               float maxLearnRate,
-                               float momentumAmount,
-                               unsigned startNumSamples,
-                               unsigned maxNumSamples) :
-    startLearnRate(startLearnRate),
-    epsilonRate(epsilonRate),
-    maxLearnRate(maxLearnRate),
-    momentumAmount(momentumAmount),
-    startNumSamples(startNumSamples),
-    maxNumSamples(maxNumSamples) {
+DynamicTrainer::DynamicTrainer(float startLearnRate, float epsilonRate, float maxLearnRate,
+                               float momentumAmount, unsigned startNumSamples,
+                               unsigned maxNumSamples)
+    : startLearnRate(startLearnRate), epsilonRate(epsilonRate), maxLearnRate(maxLearnRate),
+      momentumAmount(momentumAmount), startNumSamples(startNumSamples),
+      maxNumSamples(maxNumSamples) {
 
   assert(startLearnRate > 0.0f);
   assert(epsilonRate > 0.0f && epsilonRate < startLearnRate);
@@ -29,8 +22,8 @@ DynamicTrainer::DynamicTrainer(float startLearnRate,
   this->rnd = mt19937(rd());
 }
 
-void DynamicTrainer::Train(
-    Network &network, vector<TrainingSample> &trainingSamples, unsigned iterations) {
+void DynamicTrainer::Train(Network &network, vector<TrainingSample> &trainingSamples,
+                           unsigned iterations) {
 
   shuffle(trainingSamples.begin(), trainingSamples.end(), rnd);
   numCompletePasses = 0;
@@ -58,16 +51,16 @@ void DynamicTrainer::Train(
       weightGradientRate = gradientError.first;
       initWeightGradientRates(weightGradientRate);
     } else {
-      momentum = momentum*momentumAmount + gradientError.first*(1.0f - momentumAmount);
+      momentum = momentum * momentumAmount + gradientError.first * (1.0f - momentumAmount);
 
       updateWeightsGradientRates(prevGradient, gradientError.first, weightGradientRate);
       prevGradient = gradientError.first;
     }
 
-    network.ApplyUpdate(momentum*weightGradientRate);
+    network.ApplyUpdate(momentum * weightGradientRate);
     updateLearnRate(i, iterations, gradientError.second);
 
-    for_each(trainingCallbacks, [&network, &gradientError, i] (const NetworkTrainerCallback &cb) {
+    for_each(trainingCallbacks, [&network, &gradientError, i](const NetworkTrainerCallback &cb) {
       cb(network, gradientError.second, i);
     });
   }
@@ -92,12 +85,12 @@ void DynamicTrainer::updateLearnRate(unsigned curIter, unsigned iterations, floa
   prevSampleError = sampleError;
 }
 
-TrainingProvider DynamicTrainer::getStochasticSamples(
-    vector<TrainingSample> &allSamples, unsigned curIter, unsigned totalIters) {
+TrainingProvider DynamicTrainer::getStochasticSamples(vector<TrainingSample> &allSamples,
+                                                      unsigned curIter, unsigned totalIters) {
   unsigned numSamples = min<unsigned>(allSamples.size(), numStochasticSamples(curIter, totalIters));
 
   if ((curSamplesIndex + numSamples) > allSamples.size()) {
-    if (numCompletePasses%10 == 0) {
+    if (numCompletePasses % 10 == 0) {
       shuffle(allSamples.begin(), allSamples.end(), rnd);
     } else {
       curSamplesOffset = rnd() % allSamples.size();
@@ -118,8 +111,8 @@ void DynamicTrainer::initWeightGradientRates(Tensor &rates) {
   }
 }
 
-void DynamicTrainer::updateWeightsGradientRates(
-    const Tensor &prevGradient, const Tensor &curGradient, Tensor &rates) {
+void DynamicTrainer::updateWeightsGradientRates(const Tensor &prevGradient,
+                                                const Tensor &curGradient, Tensor &rates) {
 
   assert(curGradient.NumLayers() == prevGradient.NumLayers());
   assert(curGradient.NumLayers() == rates.NumLayers());

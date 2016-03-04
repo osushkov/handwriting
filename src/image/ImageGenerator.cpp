@@ -7,15 +7,14 @@
 
 using Vec1b = cv::Vec<unsigned char, 1>;
 
-ImageGenerator::ImageGenerator(float shiftX, float shiftY, float rotTheta) :
-    shiftX(shiftX), shiftY(shiftY), rotTheta(rotTheta) {
+ImageGenerator::ImageGenerator(float shiftX, float shiftY, float rotTheta)
+    : shiftX(shiftX), shiftY(shiftY), rotTheta(rotTheta) {
   assert(shiftX <= 1.0f);
   assert(shiftY <= 1.0f);
   assert(rotTheta <= M_PI);
 }
 
-vector<CharImage> ImageGenerator::GenerateImages(const CharImage &base,
-                                                 unsigned numImages) const {
+vector<CharImage> ImageGenerator::GenerateImages(const CharImage &base, unsigned numImages) const {
 
   cv::Mat cvImg = convertToMat(base);
 
@@ -31,12 +30,10 @@ vector<CharImage> ImageGenerator::GenerateImages(const CharImage &base,
   return result;
 }
 
-ImageGenerator::Transform
-ImageGenerator::randomTransform(const CharImage &img) const {
-  return Transform(
-      img.width * Util::RandInterval(-shiftX, shiftX),
-      img.height * Util::RandInterval(-shiftY, shiftY),
-      Util::RandInterval(-rotTheta, rotTheta));
+ImageGenerator::Transform ImageGenerator::randomTransform(const CharImage &img) const {
+  return Transform(img.width * Util::RandInterval(-shiftX, shiftX),
+                   img.height * Util::RandInterval(-shiftY, shiftY),
+                   Util::RandInterval(-rotTheta, rotTheta));
 }
 
 cv::Mat ImageGenerator::convertToMat(const CharImage &img) const {
@@ -66,20 +63,18 @@ CharImage ImageGenerator::convertToCharImage(const cv::Mat &img) const {
   return CharImage(img.cols, img.rows, pixels);
 }
 
-CharImage ImageGenerator::transformToCharImage(
-    const cv::Mat &src, const ImageGenerator::Transform &transform) const {
+CharImage ImageGenerator::transformToCharImage(const cv::Mat &src,
+                                               const ImageGenerator::Transform &transform) const {
 
-  cv::Mat rot =
-      cv::getRotationMatrix2D(cv::Point(src.rows / 2.0, src.cols / 2.0),
-                              transform.theta * 180.0 / M_PI, 1.0);
+  cv::Mat rot = cv::getRotationMatrix2D(cv::Point(src.rows / 2.0, src.cols / 2.0),
+                                        transform.theta * 180.0 / M_PI, 1.0);
   cv::Mat rotated; // = cv::Mat::zeros(src.rows, src.cols, src.type());
   warpAffine(src, rotated, rot, src.size());
   // cv::transform(src, rotated, rot);
 
   // return convertToCharImage(rotated);
 
-  cv::Mat trans = (cv::Mat_<float>(2, 3) << 1.0f, 0.0f, transform.tx, 0.0f,
-                   1.0f, transform.ty);
+  cv::Mat trans = (cv::Mat_<float>(2, 3) << 1.0f, 0.0f, transform.tx, 0.0f, 1.0f, transform.ty);
   cv::Mat translated; // = cv::Mat::zeros(src.rows, src.cols, src.type());
   warpAffine(rotated, translated, trans, src.size());
   // cv::transform(rotated, translated, trans);

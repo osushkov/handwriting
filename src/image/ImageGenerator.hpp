@@ -12,7 +12,7 @@ class ImageGenerator {
 
 public:
   ImageGenerator(float shiftX, float shiftY, float rotTheta);
-  
+
   vector<CharImage> GenerateImages(const CharImage &base, unsigned numImages) const;
 
 private:
@@ -28,6 +28,5 @@ private:
   cv::Mat convertToMat(const CharImage &img) const;
   CharImage convertToCharImage(const cv::Mat &img) const;
 
-  CharImage transformToCharImage(const cv::Mat &src,
-                                 const Transform &transform) const;
+  CharImage transformToCharImage(const cv::Mat &src, const Transform &transform) const;
 };
