@@ -161,7 +161,7 @@ uptr<Trainer> getTrainer(void) {
   builder.StartLearnRate(0.5f)
       .FinishLearnRate(0.001f)
       .MaxLearnRate(0.5f)
-      .Momentum(0.25f)
+      .Momentum(0.5f)
       .StartSamplesPerIter(1000)
       .FinishSamplesPerIter(10000)
       .UseMomentum(true)
@@ -189,7 +189,8 @@ void learn(Network &network, vector<TrainingSample> &trainingSamples,
       [&trainingSamples, &testSamples](Network &network, float trainError, unsigned iter) {
         if (iter % 10 == 0) {
           float testWrong = testNetwork(network, testSamples);
-          cout << iter << "\t" << trainError << "\t" << testWrong << endl;
+          cout << testWrong << endl;
+          // cout << iter << "\t" << trainError << "\t" << testWrong << endl;
 
           // float trainWrong = testNetwork(network, trainingSamples);
           // cout << iter << "\t" << trainError << "\t" << testWrong << "\t" << trainWrong << endl;
@@ -197,7 +198,7 @@ void learn(Network &network, vector<TrainingSample> &trainingSamples,
       });
 
   cout << "starting training..." << endl;
-  trainer->Train(network, trainingSamples, 100);
+  trainer->Train(network, trainingSamples, 2000);
   cout << "finished" << endl;
 }
 
