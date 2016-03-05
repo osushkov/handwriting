@@ -47,6 +47,19 @@ struct Network::NetworkImpl {
     }
   }
 
+  NetworkImpl(unsigned numInputs, unsigned numOutputs, unsigned numLayers,
+              const Tensor &layerWeights)
+      : numInputs(numInputs), numOutputs(numOutputs), numLayers(numLayers),
+        layerWeights(layerWeights) {
+
+    assert(numInputs > 0 && numLayers >= 2 && numOutputs > 0);
+
+    zeroGradient = layerWeights;
+    for (unsigned i = 0; i < zeroGradient.NumLayers(); i++) {
+      zeroGradient(i).setZero();
+    }
+  }
+
   Vector Process(const Vector &input) {
     assert(input.rows() == numInputs);
 
@@ -192,7 +205,20 @@ private:
   }
 };
 
+Network::Network(Network &&other) : impl(move(other.impl)) {}
 Network::Network(const vector<unsigned> &layerSizes) : impl(new NetworkImpl(layerSizes)) {}
+Network::Network(istream &stream) {
+  unsigned numInputs, numOutputs, numLayers;
+
+  stream.read((char *)&numInputs, sizeof(unsigned));
+  stream.read((char *)&numOutputs, sizeof(unsigned));
+  stream.read((char *)&numLayers, sizeof(unsigned));
+
+  Tensor layerWeights;
+  layerWeights.Deserialize(stream);
+
+  impl = make_unique<NetworkImpl>(numInputs, numOutputs, numLayers, layerWeights);
+}
 Network::~Network() = default;
 
 Vector Network::Process(const Vector &input) { return impl->Process(input); }
@@ -203,7 +229,7 @@ pair<Tensor, float> Network::ComputeGradient(const TrainingProvider &samplesProv
 
 void Network::ApplyUpdate(const Tensor &weightUpdates) { impl->ApplyUpdate(weightUpdates); }
 
-std::ostream &Network::Output(std::ostream &stream) {
+std::ostream &Network::Output(ostream &stream) {
   for (unsigned i = 0; i < impl->layerWeights.NumLayers(); i++) {
     for (unsigned r = 0; r < impl->layerWeights(i).rows(); r++) {
       for (unsigned c = 0; c < impl->layerWeights(i).cols(); c++) {
@@ -214,4 +240,12 @@ std::ostream &Network::Output(std::ostream &stream) {
     stream << endl;
   }
   return stream;
+}
+
+void Network::Serialize(std::ostream &stream) const {
+  stream.write((char *)&impl->numInputs, sizeof(unsigned));
+  stream.write((char *)&impl->numOutputs, sizeof(unsigned));
+  stream.write((char *)&impl->numLayers, sizeof(unsigned));
+
+  impl->layerWeights.Serialize(stream);
 }

@@ -4,6 +4,35 @@
 #include <iostream>
 #include <random>
 
+struct DynamicTrainer::DynamicTrainerImpl {
+  const float startLearnRate;
+  const float epsilonRate;
+  const float maxLearnRate;
+  const float momentumAmount;
+  const unsigned startNumSamples;
+  const unsigned maxNumSamples;
+
+  const bool useMomentum;
+  const bool useSpeedup;
+  const bool useWeightRates;
+
+  mt19937 rnd;
+
+  unsigned numCompletePasses;
+  unsigned curSamplesIndex;
+  unsigned curSamplesOffset;
+  float curLearnRate;
+  float prevSampleError;
+
+  DynamicTrainerImpl(float startLearnRate, float epsilonRate, float maxLearnRate,
+                     float momentumAmount, unsigned startNumSamples, unsigned maxNumSamples,
+                     bool useMomentum, bool useSpeedup, bool useWeightRates);
+
+  void Train(Network &network, vector<TrainingSample> &trainingSamples, unsigned iterations);
+
+  void AddProgressCallback(NetworkTrainerCallback callback);
+};
+
 DynamicTrainer::DynamicTrainer(float startLearnRate, float epsilonRate, float maxLearnRate,
                                float momentumAmount, unsigned startNumSamples,
                                unsigned maxNumSamples, bool useMomentum, bool useSpeedup,

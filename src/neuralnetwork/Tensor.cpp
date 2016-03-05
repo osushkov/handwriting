@@ -8,6 +8,53 @@ unsigned Tensor::NumLayers(void) const { return this->data.size(); }
 
 void Tensor::AddLayer(const Matrix &m) { this->data.push_back(m); }
 
+void Tensor::Deserialize(istream &stream) {
+  data.clear();
+
+  unsigned numLayers = 0;
+  stream.read((char *)&numLayers, sizeof(unsigned));
+
+  data.reserve(numLayers);
+  for (unsigned i = 0; i < numLayers; i++) {
+    int rows, cols;
+
+    stream.read((char *)&rows, sizeof(int));
+    stream.read((char *)&cols, sizeof(int));
+    assert(rows > 0 && cols > 0);
+
+    Matrix m(rows, cols);
+    for (int r = 0; r < rows; r++) {
+      for (int c = 0; c < cols; c++) {
+        float v;
+        stream.read((char *)&v, sizeof(float));
+        m(r, c) = v;
+      }
+    }
+
+    AddLayer(m);
+  }
+}
+
+void Tensor::Serialize(ostream &stream) const {
+  unsigned numLayers = NumLayers();
+  stream.write((char *)&numLayers, sizeof(unsigned));
+
+  for (const auto &m : data) {
+    int rows = m.rows();
+    int cols = m.cols();
+
+    stream.write((char *)&rows, sizeof(int));
+    stream.write((char *)&cols, sizeof(int));
+
+    for (int r = 0; r < rows; r++) {
+      for (int c = 0; c < cols; c++) {
+        float v = m(r, c);
+        stream.write((char *)&v, sizeof(float));
+      }
+    }
+  }
+}
+
 Matrix &Tensor::operator()(unsigned index) {
   assert(index < data.size());
   return data[index];

@@ -2,11 +2,15 @@
 
 #include "../common/Common.hpp"
 #include "../common/Math.hpp"
+#include <iostream>
 
 class Tensor {
 public:
   unsigned NumLayers(void) const;
   void AddLayer(const Matrix &m);
+
+  void Deserialize(istream &stream);
+  void Serialize(ostream &stream) const;
 
   Matrix &operator()(unsigned index);
   const Matrix &operator()(unsigned index) const;

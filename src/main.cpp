@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -27,6 +28,7 @@
 using namespace std;
 using Eigen::MatrixXd;
 
+// Number of images to generate using rotation and translation from each canonical training image.
 static constexpr unsigned NUM_DERIVED_IMAGES = 1;
 
 static constexpr float GENERATED_IMAGE_SHIFT_X = 0.1f;
@@ -84,10 +86,7 @@ map<int, vector<CharImage>> generateDerivedImages(const map<int, vector<CharImag
 
 TrainingSample sampleFromCharImage(int label, const CharImage &img) {
   Vector output(10);
-  // probably there is a better way to do this.
-  for (unsigned i = 0; i < 10; i++) {
-    output(i) = 0.0f;
-  }
+  output.fill(0.0f);
   output[label] = 1.0f;
 
   Vector input(img.pixels.size());
@@ -172,9 +171,56 @@ uptr<Trainer> getTrainer(void) {
   return builder.Build();
 }
 
-int main() {
+Network createNewNetwork(unsigned inputSize, unsigned outputSize) {
+  vector<unsigned> networkLayers = {inputSize, inputSize, outputSize};
+  return Network(networkLayers);
+}
+
+Network loadNetwork(string path) {
+  ifstream networkIn(path, ios::in | ios::binary);
+  return Network(networkIn);
+}
+
+void learn(Network &network, vector<TrainingSample> &trainingSamples,
+           vector<TrainingSample> &testSamples) {
+  auto trainer = getTrainer();
+
+  trainer->AddProgressCallback(
+      [&trainingSamples, &testSamples](Network &network, float trainError, unsigned iter) {
+        if (iter % 10 == 0) {
+          float testWrong = testNetwork(network, testSamples);
+          cout << iter << "\t" << trainError << "\t" << testWrong << endl;
+
+          // float trainWrong = testNetwork(network, trainingSamples);
+          // cout << iter << "\t" << trainError << "\t" << testWrong << "\t" << trainWrong << endl;
+        }
+      });
+
+  cout << "starting training..." << endl;
+  trainer->Train(network, trainingSamples, 100);
+  cout << "finished" << endl;
+}
+
+void eval(Network &network, const vector<TrainingSample> &testSamples) {
+  unsigned numCorrect = 0;
+
+  for (const auto &ts : testSamples) {
+    auto result = network.Process(ts.input);
+    bool isCorrect = digitFromNNOutput(result) == digitFromNNOutput(ts.expectedOutput);
+    numCorrect += isCorrect ? 1 : 0;
+  }
+
+  cout << endl
+       << "percent correct: " << (100.0f * (numCorrect / static_cast<float>(testSamples.size())))
+       << endl;
+  ;
+}
+
+int main(int argc, char **argv) {
   Eigen::initParallel();
   srand(1234);
+
+  // TODO: training+test image data paths can be command line args.
 
   cout << "loading training data" << endl;
   vector<TrainingSample> trainingSamples =
@@ -191,23 +237,21 @@ int main() {
   unsigned inputSize = trainingSamples.front().input.rows();
   unsigned outputSize = trainingSamples.front().expectedOutput.rows();
 
-  Network network({inputSize, inputSize, outputSize});
-  auto trainer = getTrainer();
+  // TODO: should probably use a command line args parsing library here.
+  if (argc == 1 || (argc >= 2 && string(argv[1]) == "train")) {
+    Network network = argc == 3 ? loadNetwork(argv[2]) : createNewNetwork(inputSize, outputSize);
+    learn(network, trainingSamples, testSamples);
 
-  trainer->AddProgressCallback(
-      [&trainingSamples, &testSamples](Network &network, float trainError, unsigned iter) {
-        if (iter % 10 == 0) {
-          float testWrong = testNetwork(network, testSamples);
-          cout << iter << "\t" << trainError << "\t" << testWrong << endl;
+    ofstream networkOut("network.dat", ios::out | ios::binary);
+    network.Serialize(networkOut);
+  } else if (argc == 3 && string(argv[1]) == "eval") {
+    Network network = loadNetwork(argv[2]);
+    eval(network, testSamples);
+  } else {
+    cout << "invalid arguments, expected: " << endl;
+    cout << string(argv[0]) << " train [existing_network_file]" << endl;
+    cout << string(argv[0]) << " test network_file" << endl;
+  }
 
-          // float trainWrong = testNetwork(network, trainingSamples);
-          // cout << iter << "\t" << trainError << "\t" << testWrong << "\t" << trainWrong << endl;
-        }
-      });
-
-  cout << "starting training..." << endl;
-  trainer->Train(network, trainingSamples, 100000);
-
-  cout << "finished" << endl;
   return 0;
 }
