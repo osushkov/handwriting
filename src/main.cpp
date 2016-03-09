@@ -29,7 +29,7 @@ using namespace std;
 using Eigen::MatrixXd;
 
 // Number of images to generate using rotation and translation from each canonical training image.
-static constexpr unsigned NUM_DERIVED_IMAGES = 1;
+static constexpr unsigned NUM_DERIVED_IMAGES = 5;
 
 static constexpr float GENERATED_IMAGE_SHIFT_X = 0.1f;
 static constexpr float GENERATED_IMAGE_SHIFT_Y = 0.1f;
@@ -159,7 +159,7 @@ uptr<Trainer> getTrainer(void) {
   DynamicTrainerBuilder builder;
 
   builder.StartLearnRate(0.5f)
-      .FinishLearnRate(0.001f)
+      .FinishLearnRate(0.01f)
       .MaxLearnRate(0.5f)
       .Momentum(0.5f)
       .StartSamplesPerIter(1000)
@@ -187,9 +187,9 @@ void learn(Network &network, vector<TrainingSample> &trainingSamples,
 
   trainer->AddProgressCallback(
       [&trainingSamples, &testSamples](Network &network, float trainError, unsigned iter) {
-        if (iter % 10 == 0) {
+        if (iter % 100 == 0) {
           float testWrong = testNetwork(network, testSamples);
-          cout << testWrong << endl;
+          cout << iter << "\t" << testWrong << endl;
           // cout << iter << "\t" << trainError << "\t" << testWrong << endl;
 
           // float trainWrong = testNetwork(network, trainingSamples);
@@ -198,7 +198,7 @@ void learn(Network &network, vector<TrainingSample> &trainingSamples,
       });
 
   cout << "starting training..." << endl;
-  trainer->Train(network, trainingSamples, 2000);
+  trainer->Train(network, trainingSamples, 20000);
   cout << "finished" << endl;
 }
 
