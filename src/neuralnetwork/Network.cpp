@@ -20,6 +20,7 @@ static const float INIT_WEIGHT_RANGE = 0.1f;
 
 struct NetworkContext {
   vector<Vector> layerOutputs;
+  vector<Vector> layerDerivatives;
   vector<Vector> layerDeltas;
 };
 
@@ -138,26 +139,46 @@ private:
     assert(input.rows() == numInputs);
 
     ctx.layerOutputs.resize(layerWeights.NumLayers());
-    ctx.layerOutputs[0] = getLayerOutput(input, layerWeights(0));
+    ctx.layerDerivatives.resize(layerWeights.NumLayers());
+
+    auto out = getLayerOutput(input, layerWeights(0), false);
+    ctx.layerOutputs[0] = out.first;
+    ctx.layerDerivatives[0] = out.second;
+
     for (unsigned i = 1; i < layerWeights.NumLayers(); i++) {
-      ctx.layerOutputs[i] = getLayerOutput(ctx.layerOutputs[i - 1], layerWeights(i));
+      auto out = getLayerOutput(ctx.layerOutputs[i - 1], layerWeights(i),
+                                i == layerWeights.NumLayers() - 1);
+      ctx.layerOutputs[i] = out.first;
+      ctx.layerDerivatives[i] = out.second;
     }
 
     assert(ctx.layerOutputs[ctx.layerOutputs.size() - 1].rows() == numOutputs);
     return ctx.layerOutputs[ctx.layerOutputs.size() - 1];
   }
 
-  Vector getLayerOutput(const Vector &prevLayer, const Matrix &layerWeights) const {
+  // Returns the output vector of the layer, and the derivative vector for the layer.
+  pair<Vector, Vector> getLayerOutput(const Vector &prevLayer, const Matrix &layerWeights,
+                                      bool isOutput) const {
     Vector z =
         layerWeights.topRightCorner(layerWeights.rows(), layerWeights.cols() - 1) * prevLayer;
+    Vector derivatives(z.rows());
+
     for (unsigned i = 0; i < layerWeights.rows(); i++) {
       z(i) += layerWeights(i, 0);
-      z(i) = activationFunc(z(i));
+      float in = z(i);
+      z(i) = isOutput ? outputActivationFunc(in) : activationFunc(in);
+
+      derivatives(i) = isOutput ? outputDerivativeFunc(in, z(i)) : derivativeFunc(in, z(i));
     }
-    return z;
+
+    return make_pair(z, derivatives);
   }
 
+  float outputActivationFunc(float v) const { return 1.0f / (1.0f + expf(-v)); }
   float activationFunc(float v) const { return 1.0f / (1.0f + expf(-v)); }
+
+  float outputDerivativeFunc(float in, float out) const { return out * (1.0f - out); }
+  float derivativeFunc(float in, float out) const { return out * (1.0f - out); }
 
   void computeSampleGradient(const TrainingSample &sample, NetworkContext &ctx,
                              pair<Tensor, float> &outGradient) const {
@@ -175,7 +196,7 @@ private:
       assert(ctx.layerDeltas[i].rows() == ctx.layerOutputs[i].rows());
       for (unsigned r = 0; r < ctx.layerDeltas[i].rows(); r++) {
         float out = ctx.layerOutputs[i](r);
-        ctx.layerDeltas[i](r) *= out * (1.0f - out);
+        ctx.layerDeltas[i](r) *= ctx.layerDerivatives[i](r);
       }
     }
 
