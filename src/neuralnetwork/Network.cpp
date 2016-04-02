@@ -175,10 +175,14 @@ private:
   }
 
   float outputActivationFunc(float v) const { return 1.0f / (1.0f + expf(-v)); }
-  float activationFunc(float v) const { return 1.0f / (1.0f + expf(-v)); }
+  // float activationFunc(float v) const { return 1.0f / (1.0f + expf(-v)); } // logistic function
+  // float activationFunc(float v) const { return logf(1.0f + expf(v)); } // softplus function
+  float activationFunc(float v) const { return v > 0.0f ? v : (0.01f * v); }
 
   float outputDerivativeFunc(float in, float out) const { return out * (1.0f - out); }
-  float derivativeFunc(float in, float out) const { return out * (1.0f - out); }
+  // float derivativeFunc(float in, float out) const { return out * (1.0f - out); }
+  // float derivativeFunc(float in, float out) const { return 1.0f / (1.0f + expf(-in)); }
+  float derivativeFunc(float in, float out) const { return in > 0.0f ? 1.0f : 0.01f; }
 
   void computeSampleGradient(const TrainingSample &sample, NetworkContext &ctx,
                              pair<Tensor, float> &outGradient) const {
@@ -195,7 +199,6 @@ private:
 
       assert(ctx.layerDeltas[i].rows() == ctx.layerOutputs[i].rows());
       for (unsigned r = 0; r < ctx.layerDeltas[i].rows(); r++) {
-        float out = ctx.layerOutputs[i](r);
         ctx.layerDeltas[i](r) *= ctx.layerDerivatives[i](r);
       }
     }

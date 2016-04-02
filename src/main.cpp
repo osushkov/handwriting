@@ -162,7 +162,7 @@ uptr<Trainer> getTrainer(void) {
       .FinishLearnRate(0.01f)
       .MaxLearnRate(0.5f)
       .Momentum(0.5f)
-      .StartSamplesPerIter(100)
+      .StartSamplesPerIter(1000)
       .FinishSamplesPerIter(10000)
       .UseMomentum(true)
       .UseSpeedup(true)
@@ -172,7 +172,7 @@ uptr<Trainer> getTrainer(void) {
 }
 
 Network createNewNetwork(unsigned inputSize, unsigned outputSize) {
-  vector<unsigned> networkLayers = {inputSize, inputSize, outputSize};
+  vector<unsigned> networkLayers = {inputSize, inputSize / 2, inputSize / 4, outputSize};
   return Network(networkLayers);
 }
 
@@ -187,7 +187,7 @@ void learn(Network &network, vector<TrainingSample> &trainingSamples,
 
   trainer->AddProgressCallback(
       [&trainingSamples, &testSamples](Network &network, float trainError, unsigned iter) {
-        if (iter % 10 == 0) {
+        if (iter % 100 == 0) {
           float testWrong = testNetwork(network, testSamples);
           cout << iter << "\t" << testWrong << endl;
           // cout << iter << "\t" << trainError << "\t" << testWrong << endl;
