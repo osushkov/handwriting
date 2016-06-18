@@ -1,6 +1,8 @@
 # handwriting
 
-Handwriting recognition using a neural net.
+Handwriting recognition using a neural net. More detailed description can be found in the following two blog posts:
+http://thevoid.ghost.io/hand-written-digit-recognition/
+http://thevoid.ghost.io/handwritten-digit-recognition-part-1/
 
 The input data is using the MNIST handwritten digits dataset file format. This can be found here: http://yann.lecun.com/exdb/mnist/
 
